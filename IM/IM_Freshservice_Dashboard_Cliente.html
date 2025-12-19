@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Plan Freshservice - Ignazio Messina | CRMpartners</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .gantt-bar { transition: all 0.3s ease; cursor: pointer; }
+        .gantt-bar:hover { transform: scaleY(1.15); filter: brightness(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .critical-path { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.75; } }
+        .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+        .milestone-marker { 
+            width: 14px; height: 14px; 
+            transform: rotate(45deg); 
+            position: absolute; 
+            top: 50%; 
+            margin-top: -7px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .tooltip { 
+            position: fixed; 
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%); 
+            color: white; 
+            padding: 16px 20px; 
+            border-radius: 12px; 
+            font-size: 13px; 
+            z-index: 1000; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            max-width: 320px;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 18px; height: 18px; border-radius: 4px; }
+        .phase-card { transition: all 0.3s ease; }
+        .phase-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .today-line { z-index: 5; }
+        .today-label { 
+            position: absolute; 
+            top: -20px; 
+            transform: translateX(-50%); 
+            background: #ef4444; 
+            color: white; 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            font-size: 10px; 
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        @media print { 
+            .no-print { display: none !important; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .gantt-container { max-height: none !important; overflow: visible !important; }
+        }
+        .filter-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <div id="app"></div>
+
+    <script>
+        // ==================== PROJECT DATA ====================
+        const PROJECT_DATA = {
+            projectName: "Freshservice Implementation",
+            client: "Ignazio Messina & C. S.p.A.",
+            vendor: "CRMpartners",
+            projectStart: "2025-09-22",
+            projectEnd: "2026-03-20",
+            lastUpdated: "2025-01-20",
+            tasks: [
+                // Raccolta Requisiti
+                { id: "0.10", phase: "Raccolta Requisiti", task: "Approvazione servizi", priority: "Alta", owner: "IM", status: "In Lavorazione", start: "2025-09-22", end: "2026-01-23", milestone: true, dependencies: [], isCritical: true },
+                { id: "0.20", phase: "Raccolta Requisiti", task: "Campi da aggiungere ad ogni servizio", priority: "Alta", owner: "IM", status: "Non Iniziato", start: "2025-09-22", end: "2026-01-30", milestone: false, dependencies: [], isCritical: true },
+                { id: "0.30", phase: "Raccolta Requisiti", task: "Conferma workflows e processi approvazione", priority: "Alta", owner: "IM", status: "Non Iniziato", start: "2025-09-22", end: "2026-01-30", milestone: true, dependencies: [], isCritical: true },
+                { id: "0.40", phase: "Raccolta Requisiti", task: "SLA", priority: "Alta", owner: "IM", status: "Non Iniziato", start: "2025-09-29", end: "2026-01-30", milestone: false, dependencies: [], isCritical: false },
+                { id: "0.50", phase: "Raccolta Requisiti", task: "Testi notifiche, etc", priority: "Alta", owner: "IM", status: "Non Iniziato", start: "2025-09-29", end: "2026-02-13", milestone: false, dependencies: [], isCritical: false },
+                { id: "0.60", phase: "Raccolta Requisiti Fase II", task: "Assets", priority: "Media", owner: "IM", status: "Non Iniziato", start: "2025-10-27", end: "2026-02-06", milestone: true, dependencies: [], isCritical: true },
+                { id: "0.70", phase: "Raccolta Requisiti Fase III", task: "Analisi processo onboarding/offboarding", priority: "Bassa", owner: "IM", status: "Non Iniziato", start: "2025-11-01", end: "2026-02-20", milestone: true, dependencies: [], isCritical: false },
+                
+                // Fase I - Setup Iniziale
+                { id: "1.70", phase: "Fase I", task: "Call con responsabile SSO", priority: "Alta", owner: "IM & CRMP", status: "Completato", start: "2025-10-13", end: "2025-10-27", milestone: false, dependencies: [], isCritical: false },
+                { id: "1.80", phase: "Fase I", task: "SSO setup", priority: "Alta", owner: "IM", status: "Completato", start: "2025-10-13", end: "2025-10-27", milestone: false, dependencies: ["1.70"], isCritical: false },
+                { id: "1.90", phase: "Fase I", task: "Permessi e Sicurezza Helpdesk", priority: "Alta", owner: "IM & CRMP", status: "Completato", start: "2025-10-13", end: "2025-10-27", milestone: false, dependencies: [], isCritical: false },
+                { id: "1.11", phase: "Fase I", task: "CNAME", priority: "Alta", owner: "IM & CRMP", status: "Non Iniziato", start: "2025-10-20", end: "2025-11-03", milestone: false, dependencies: [], isCritical: false },
+                
+                // Fase I - Configurazione Core
+                { id: "1.12", phase: "Fase I", task: "Creazione Service Item", priority: "Alta", owner: "CRMP", status: "In Lavorazione", start: "2026-01-17", end: "2026-01-30", milestone: false, dependencies: ["0.10"], isCritical: true },
+                { id: "1.10", phase: "Fase I", task: "Creazione Operatori", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["1.80"], isCritical: true },
+                { id: "1.40", phase: "Fase I", task: "Creazione Gruppi Operatori", priority: "Alta", owner: "CRMP", status: "In Lavorazione", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["0.10"], isCritical: true },
+                { id: "1.50", phase: "Fase I", task: "Creazione Gruppi Richiedenti", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["0.10"], isCritical: false },
+                { id: "1.60", phase: "Fase I", task: "Creazione Reparti", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["0.10"], isCritical: false },
+                { id: "1.13", phase: "Fase I", task: "Regole visibilità SR", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["0.10", "0.20"], isCritical: true },
+                { id: "1.14", phase: "Fase I", task: "Regole di layout SR", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["0.10", "0.20"], isCritical: false },
+                { id: "1.15", phase: "Fase I", task: "Creazione tabelle dati", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: true, dependencies: ["0.10", "0.20"], isCritical: true },
+                
+                // Fase I - Workflow
+                { id: "1.20", phase: "Fase I", task: "Assegnazione Ruoli e Permessi", priority: "Alta", owner: "CRMP", status: "In Lavorazione", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["1.80"], isCritical: true },
+                { id: "1.30", phase: "Fase I", task: "Personalizzazione Anagrafica", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["1.80"], isCritical: false },
+                { id: "1.16", phase: "Fase I", task: "Creazione Workflow Approvativi SR", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.10", "0.20", "0.30", "0.60"], isCritical: true },
+                { id: "1.17", phase: "Fase I", task: "Creazione Workflow Orchestration", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.10", "0.20", "0.30", "0.60"], isCritical: true },
+                { id: "1.19", phase: "Fase I", task: "Creazione Workflow Assegnazione SR", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: true, dependencies: ["0.10", "0.20", "0.30"], isCritical: true },
+                { id: "1.21", phase: "Fase I", task: "Creazione SLA di Servizio", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.40"], isCritical: false },
+                { id: "1.20b", phase: "Fase I", task: "Creazione Orari di Ufficio", priority: "Media", owner: "CRMP", status: "Non Iniziato", start: "2026-02-13", end: "2026-02-27", milestone: false, dependencies: ["0.50"], isCritical: false },
+                
+                // Fase I - Incident Management
+                { id: "2.10", phase: "Fase I", task: "Creazione Categoria Ticket INC", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["0.10", "0.20"], isCritical: true },
+                { id: "2.20", phase: "Fase I", task: "Creazione Campi custom form INC", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.10", "0.20"], isCritical: true },
+                { id: "2.30", phase: "Fase I", task: "Creazione regole di Layout INC", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: true, dependencies: ["0.10", "0.20", "0.30"], isCritical: true },
+                { id: "2.40", phase: "Fase I", task: "Creazione Workflow Assegnazione INC", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.10", "0.20", "0.30", "0.60"], isCritical: true },
+                { id: "2.50", phase: "Fase I", task: "Creazione Workflow escalation INC", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.10", "0.20", "0.30", "0.60"], isCritical: true },
+                { id: "2.60", phase: "Fase I", task: "Creazione Regole di chiusura ticket", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: true, dependencies: ["0.30"], isCritical: true },
+                { id: "2.70", phase: "Fase I", task: "Creazione Notifiche automatiche", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-01-30", end: "2026-02-13", milestone: false, dependencies: ["0.30", "0.50"], isCritical: false },
+                { id: "2.80", phase: "Fase I", task: "Configurazione Survey", priority: "Media", owner: "CRMP", status: "Non Iniziato", start: "2026-02-13", end: "2026-02-27", milestone: false, dependencies: ["2.60"], isCritical: false },
+                
+                // Fase II - Asset Management
+                { id: "3.00", phase: "Fase II", task: "Call su Assets ed analisi", priority: "Alta", owner: "IM & CRMP", status: "Non Iniziato", start: "2026-02-06", end: "2026-02-20", milestone: false, dependencies: ["0.60"], isCritical: true },
+                { id: "3.10", phase: "Fase II", task: "Discovery probe SCCM", priority: "Alta", owner: "IM & CRMP", status: "Non Iniziato", start: "2026-02-06", end: "2026-02-20", milestone: false, dependencies: ["0.60"], isCritical: true },
+                { id: "3.20", phase: "Fase II", task: "Campi custom assets", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-02-06", end: "2026-02-20", milestone: false, dependencies: ["0.60", "0.10"], isCritical: true },
+                { id: "3.30", phase: "Fase II", task: "Workflow Asset rottura stock", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-02-06", end: "2026-02-20", milestone: false, dependencies: ["0.60", "0.20", "0.30"], isCritical: false },
+                { id: "3.40", phase: "Fase II", task: "Mappatura fulfill asset service request", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-02-06", end: "2026-02-20", milestone: true, dependencies: ["0.60", "0.20", "0.30", "1.12"], isCritical: true },
+                
+                // Fase III - Onboarding/Offboarding
+                { id: "4.00", phase: "Fase III", task: "Analisi processo onboarding/offboarding", priority: "Alta", owner: "IM & CRMP", status: "Non Iniziato", start: "2026-02-20", end: "2026-03-06", milestone: false, dependencies: ["0.70"], isCritical: false },
+                { id: "4.10", phase: "Fase III", task: "Creazione form HR", priority: "Alta", owner: "IM", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-20", milestone: false, dependencies: ["0.70", "0.10"], isCritical: false },
+                { id: "4.20", phase: "Fase III", task: "Creazione Kit Onboarding", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-20", milestone: false, dependencies: ["0.70", "0.10", "0.20", "0.30", "4.00"], isCritical: false },
+                { id: "4.30", phase: "Fase III", task: "Creazione struttura ticket parent child", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-20", milestone: false, dependencies: ["0.70", "0.10", "0.20", "0.30"], isCritical: false },
+                { id: "4.40", phase: "Fase III", task: "Opzionale: Integrazione Success Factor (SAP)", priority: "Bassa", owner: "CRMP", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-20", milestone: false, dependencies: ["0.70", "0.10", "0.20", "0.30"], isCritical: false },
+                { id: "4.50", phase: "Fase III", task: "Creazione notifiche a stakeholders", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-20", milestone: true, dependencies: ["4.00", "0.50"], isCritical: false },
+                { id: "4.60", phase: "Fase III", task: "Creazione form offboarding", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-20", milestone: true, dependencies: ["0.70", "0.10", "0.20", "0.30", "4.00"], isCritical: false },
+                
+                // Reports
+                { id: "5.00", phase: "Reports", task: "Analisi report richiesti", priority: "Alta", owner: "IM & CRMP", status: "Non Iniziato", start: "2026-01-23", end: "2026-02-06", milestone: false, dependencies: ["3.40"], isCritical: false },
+                { id: "5.10", phase: "Reports", task: "Custom reports", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-02-13", end: "2026-02-27", milestone: true, dependencies: ["3.40", "4.40", "4.60"], isCritical: false },
+                
+                // Training & Go-Live
+                { id: "6.00", phase: "Training", task: "Formazione admin", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-03-06", end: "2026-03-13", milestone: false, dependencies: ["4.60", "3.40", "2.60"], isCritical: false },
+                { id: "6.10", phase: "Training", task: "Formazione operatori", priority: "Alta", owner: "CRMP", status: "Non Iniziato", start: "2026-03-13", end: "2026-03-20", milestone: true, dependencies: ["2.60"], isCritical: false },
+                { id: "6.20", phase: "Go-Live", task: "UAT, feedback e modifiche e GO-LIVE", priority: "Alta", owner: "IM & CRMP", status: "Non Iniziato", start: "2026-02-20", end: "2026-03-20", milestone: true, dependencies: ["4.60"], isCritical: true }
+            ]
+        };
+
+        // ==================== UTILITY FUNCTIONS ====================
+        const parseDate = (dateStr) => new Date(dateStr);
+        const formatDate = (date) => {
+            if (typeof date === 'string') date = new Date(date);
+            return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+        };
+        const daysBetween = (start, end) => Math.ceil((parseDate(end) - parseDate(start)) / (1000 * 60 * 60 * 24));
+        const today = new Date();
+        
+        const getStatusColor = (status) => {
+            const colors = {
+                'Completato': { bg: '#dcfce7', text: '#166534', border: '#22c55e' },
+                'In Lavorazione': { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
+                'Non Iniziato': { bg: '#f3f4f6', text: '#4b5563', border: '#9ca3af' },
+                'In Ritardo': { bg: '#fee2e2', text: '#991b1b', border: '#ef4444' }
+            };
+            return colors[status] || colors['Non Iniziato'];
+        };
+
+        const getPhaseColor = (phase) => {
+            const colors = {
+                'Raccolta Requisiti': '#8b5cf6',
+                'Raccolta Requisiti Fase II': '#a78bfa',
+                'Raccolta Requisiti Fase III': '#c4b5fd',
+                'Fase I': '#3b82f6',
+                'Fase II': '#06b6d4',
+                'Fase III': '#10b981',
+                'Reports': '#f59e0b',
+                'Training': '#ec4899',
+                'Go-Live': '#ef4444'
+            };
+            return colors[phase] || '#6b7280';
+        };
+
+        const getOwnerColor = (owner) => {
+            const colors = {
+                'CRMP': '#3b82f6',
+                'IM': '#10b981',
+                'IM & CRMP': '#8b5cf6'
+            };
+            return colors[owner] || '#6b7280';
+        };
+
+        const calculateStats = (tasks, filters) => {
+            let filtered = tasks;
+            if (filters.phase !== 'all') filtered = filtered.filter(t => t.phase === filters.phase);
+            if (filters.owner !== 'all') filtered = filtered.filter(t => t.owner === filters.owner);
+            if (filters.status !== 'all') filtered = filtered.filter(t => t.status === filters.status);
+            if (filters.criticalOnly) filtered = filtered.filter(t => t.isCritical);
+
+            const total = filtered.length;
+            const completed = filtered.filter(t => t.status === 'Completato').length;
+            const inProgress = filtered.filter(t => t.status === 'In Lavorazione').length;
+            const notStarted = filtered.filter(t => t.status === 'Non Iniziato').length;
+            const milestones = filtered.filter(t => t.milestone).length;
+            const critical = filtered.filter(t => t.isCritical).length;
+            
+            return {
+                total, completed, inProgress, notStarted, milestones, critical,
+                completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+                progressRate: total > 0 ? Math.round(((completed + inProgress * 0.5) / total) * 100) : 0
+            };
+        };
+
+        // ==================== REACT APP ====================
+        const App = () => {
+            const [filters, setFilters] = React.useState({
+                phase: 'all',
+                owner: 'all',
+                status: 'all',
+                criticalOnly: false
+            });
+            const [tooltip, setTooltip] = React.useState({ visible: false, x: 0, y: 0, content: null });
+            const [zoom, setZoom] = React.useState(1);
+
+            const data = PROJECT_DATA;
+            const phases = [...new Set(data.tasks.map(t => t.phase))];
+            const owners = [...new Set(data.tasks.map(t => t.owner))];
+            const statuses = [...new Set(data.tasks.map(t => t.status))];
+            const stats = calculateStats(data.tasks, filters);
+
+            const filteredTasks = data.tasks.filter(t => {
+                if (filters.phase !== 'all' && t.phase !== filters.phase) return false;
+                if (filters.owner !== 'all' && t.owner !== filters.owner) return false;
+                if (filters.status !== 'all' && t.status !== filters.status) return false;
+                if (filters.criticalOnly && !t.isCritical) return false;
+                return true;
+            });
+
+            const totalProjectDays = daysBetween(data.projectStart, data.projectEnd);
+            
+            const getPositionPercent = (date) => {
+                const days = daysBetween(data.projectStart, date);
+                return Math.max(0, Math.min(100, (days / totalProjectDays) * 100));
+            };
+
+            const getWidthPercent = (start, end) => {
+                const days = daysBetween(start, end);
+                return Math.max((days / totalProjectDays) * 100, 0.5);
+            };
+
+            // Month markers
+            const months = [];
+            let current = new Date(data.projectStart);
+            const projectEnd = new Date(data.projectEnd);
+            while (current <= projectEnd) {
+                months.push(new Date(current));
+                current.setMonth(current.getMonth() + 1);
+            }
+
+            const showTooltip = (e, task) => {
+                const rect = e.target.getBoundingClientRect();
+                setTooltip({
+                    visible: true,
+                    x: Math.min(e.clientX, window.innerWidth - 340),
+                    y: e.clientY - 10,
+                    content: task
+                });
+            };
+
+            const hideTooltip = () => setTooltip({ ...tooltip, visible: false });
+
+            const todayPosition = getPositionPercent(today.toISOString().split('T')[0]);
+            const daysToGoLive = Math.max(0, daysBetween(today.toISOString().split('T')[0], data.projectEnd));
+
+            return React.createElement('div', { className: 'min-h-screen' },
+                // Header
+                React.createElement('header', { className: 'bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white shadow-xl' },
+                    React.createElement('div', { className: 'max-w-full mx-auto px-6 py-5' },
+                        React.createElement('div', { className: 'flex justify-between items-center' },
+                            React.createElement('div', { className: 'flex items-center gap-4' },
+                                React.createElement('div', { className: 'w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm' },
+                                    React.createElement('svg', { className: 'w-7 h-7', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' })
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('h1', { className: 'text-2xl font-bold tracking-tight' }, data.projectName),
+                                    React.createElement('p', { className: 'text-blue-200 text-sm mt-0.5' }, `${data.client} | ${data.vendor}`)
+                                )
+                            ),
+                            React.createElement('div', { className: 'flex items-center gap-6' },
+                                React.createElement('div', { className: 'text-right' },
+                                    React.createElement('div', { className: 'text-blue-200 text-xs uppercase tracking-wider' }, 'Periodo Progetto'),
+                                    React.createElement('div', { className: 'font-semibold' }, `${formatDate(data.projectStart)} → ${formatDate(data.projectEnd)}`)
+                                ),
+                                React.createElement('div', { className: 'h-10 w-px bg-white/20' }),
+                                React.createElement('button', { 
+                                    onClick: () => window.print(),
+                                    className: 'no-print bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-lg flex items-center gap-2 transition font-medium'
+                                },
+                                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z' })
+                                    ),
+                                    'Esporta PDF'
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Stats Cards
+                React.createElement('div', { className: 'max-w-full mx-auto px-6 py-5' },
+                    React.createElement('div', { className: 'grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4' },
+                        // Total Tasks
+                        React.createElement('div', { className: 'stat-card bg-white rounded-xl shadow-sm p-5 border border-gray-100' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-gray-500 text-xs uppercase tracking-wider font-medium mb-1' }, 'Totale Attività'),
+                                    React.createElement('div', { className: 'text-3xl font-bold text-gray-900' }, stats.total)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center' },
+                                    React.createElement('svg', { className: 'w-6 h-6 text-gray-500', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' })
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: 'text-xs text-gray-400 mt-2' }, `${stats.milestones} milestone`)
+                        ),
+                        // Completed
+                        React.createElement('div', { className: 'stat-card bg-white rounded-xl shadow-sm p-5 border border-green-100' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-green-600 text-xs uppercase tracking-wider font-medium mb-1' }, 'Completate'),
+                                    React.createElement('div', { className: 'text-3xl font-bold text-green-600' }, stats.completed)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center' },
+                                    React.createElement('svg', { className: 'w-6 h-6 text-green-600', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M5 13l4 4L19 7' })
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: 'w-full bg-green-100 rounded-full h-2 mt-3' },
+                                React.createElement('div', { className: 'bg-green-500 h-2 rounded-full transition-all', style: { width: `${stats.completionRate}%` } })
+                            )
+                        ),
+                        // In Progress
+                        React.createElement('div', { className: 'stat-card bg-white rounded-xl shadow-sm p-5 border border-blue-100' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-blue-600 text-xs uppercase tracking-wider font-medium mb-1' }, 'In Lavorazione'),
+                                    React.createElement('div', { className: 'text-3xl font-bold text-blue-600' }, stats.inProgress)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center' },
+                                    React.createElement('svg', { className: 'w-6 h-6 text-blue-600', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' })
+                                    )
+                                )
+                            )
+                        ),
+                        // Not Started
+                        React.createElement('div', { className: 'stat-card bg-white rounded-xl shadow-sm p-5 border border-gray-100' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-gray-500 text-xs uppercase tracking-wider font-medium mb-1' }, 'Non Iniziate'),
+                                    React.createElement('div', { className: 'text-3xl font-bold text-gray-600' }, stats.notStarted)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center' },
+                                    React.createElement('svg', { className: 'w-6 h-6 text-gray-500', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' })
+                                    )
+                                )
+                            )
+                        ),
+                        // Critical Path
+                        React.createElement('div', { className: 'stat-card bg-white rounded-xl shadow-sm p-5 border border-red-100' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-red-600 text-xs uppercase tracking-wider font-medium mb-1' }, 'Critical Path'),
+                                    React.createElement('div', { className: 'text-3xl font-bold text-red-600' }, stats.critical)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center' },
+                                    React.createElement('span', { className: 'text-2xl' }, '🔥')
+                                )
+                            ),
+                            React.createElement('div', { className: 'text-xs text-red-400 mt-2' }, 'attività bloccanti')
+                        ),
+                        // Progress
+                        React.createElement('div', { className: 'stat-card bg-white rounded-xl shadow-sm p-5 border border-purple-100' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-purple-600 text-xs uppercase tracking-wider font-medium mb-1' }, 'Avanzamento'),
+                                    React.createElement('div', { className: 'text-3xl font-bold text-purple-600' }, `${stats.progressRate}%`)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center' },
+                                    React.createElement('svg', { className: 'w-6 h-6 text-purple-600', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' })
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: 'w-full bg-purple-100 rounded-full h-2 mt-3' },
+                                React.createElement('div', { className: 'bg-purple-500 h-2 rounded-full transition-all', style: { width: `${stats.progressRate}%` } })
+                            )
+                        ),
+                        // Days to Go-Live
+                        React.createElement('div', { className: 'stat-card bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg p-5 text-white' },
+                            React.createElement('div', { className: 'flex items-center justify-between' },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: 'text-blue-200 text-xs uppercase tracking-wider font-medium mb-1' }, 'Giorni al Go-Live'),
+                                    React.createElement('div', { className: 'text-3xl font-bold' }, daysToGoLive)
+                                ),
+                                React.createElement('div', { className: 'w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center' },
+                                    React.createElement('svg', { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M13 10V3L4 14h7v7l9-11h-7z' })
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: 'text-xs text-blue-200 mt-2' }, formatDate(data.projectEnd))
+                        )
+                    )
+                ),
+
+                // Filters
+                React.createElement('div', { className: 'max-w-full mx-auto px-6 py-2 no-print' },
+                    React.createElement('div', { className: 'bg-white rounded-xl shadow-sm p-4 border border-gray-100' },
+                        React.createElement('div', { className: 'flex flex-wrap items-center gap-4' },
+                            React.createElement('span', { className: 'text-sm font-semibold text-gray-700' }, '🔍 Filtri:'),
+                            React.createElement('div', { className: 'flex items-center gap-2' },
+                                React.createElement('label', { className: 'text-sm text-gray-600' }, 'Fase'),
+                                React.createElement('select', {
+                                    value: filters.phase,
+                                    onChange: (e) => setFilters({ ...filters, phase: e.target.value }),
+                                    className: 'filter-select border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white'
+                                },
+                                    React.createElement('option', { value: 'all' }, 'Tutte'),
+                                    phases.map(p => React.createElement('option', { key: p, value: p }, p))
+                                )
+                            ),
+                            React.createElement('div', { className: 'flex items-center gap-2' },
+                                React.createElement('label', { className: 'text-sm text-gray-600' }, 'Owner'),
+                                React.createElement('select', {
+                                    value: filters.owner,
+                                    onChange: (e) => setFilters({ ...filters, owner: e.target.value }),
+                                    className: 'filter-select border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white'
+                                },
+                                    React.createElement('option', { value: 'all' }, 'Tutti'),
+                                    owners.map(o => React.createElement('option', { key: o, value: o }, o))
+                                )
+                            ),
+                            React.createElement('div', { className: 'flex items-center gap-2' },
+                                React.createElement('label', { className: 'text-sm text-gray-600' }, 'Status'),
+                                React.createElement('select', {
+                                    value: filters.status,
+                                    onChange: (e) => setFilters({ ...filters, status: e.target.value }),
+                                    className: 'filter-select border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white'
+                                },
+                                    React.createElement('option', { value: 'all' }, 'Tutti'),
+                                    statuses.map(s => React.createElement('option', { key: s, value: s }, s))
+                                )
+                            ),
+                            React.createElement('button', {
+                                onClick: () => setFilters({ ...filters, criticalOnly: !filters.criticalOnly }),
+                                className: `px-4 py-2 rounded-lg text-sm font-medium transition-all ${filters.criticalOnly ? 'bg-red-600 text-white shadow-md' : 'bg-red-50 text-red-600 hover:bg-red-100'}`
+                            }, '🔥 Solo Critical Path'),
+                            React.createElement('div', { className: 'ml-auto flex items-center gap-3 border-l border-gray-200 pl-4' },
+                                React.createElement('span', { className: 'text-sm text-gray-500' }, 'Zoom'),
+                                React.createElement('div', { className: 'flex items-center gap-1 bg-gray-100 rounded-lg p-1' },
+                                    React.createElement('button', { 
+                                        onClick: () => setZoom(Math.max(0.5, zoom - 0.25)), 
+                                        className: 'w-8 h-8 rounded-md bg-white shadow-sm hover:bg-gray-50 flex items-center justify-center font-bold text-gray-600'
+                                    }, '−'),
+                                    React.createElement('span', { className: 'text-sm w-14 text-center font-medium' }, `${Math.round(zoom * 100)}%`),
+                                    React.createElement('button', { 
+                                        onClick: () => setZoom(Math.min(2, zoom + 0.25)), 
+                                        className: 'w-8 h-8 rounded-md bg-white shadow-sm hover:bg-gray-50 flex items-center justify-center font-bold text-gray-600'
+                                    }, '+')
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // Legend
+                React.createElement('div', { className: 'max-w-full mx-auto px-6 py-2' },
+                    React.createElement('div', { className: 'bg-white rounded-xl shadow-sm p-4 border border-gray-100' },
+                        React.createElement('div', { className: 'flex flex-wrap items-center gap-6' },
+                            React.createElement('span', { className: 'text-sm font-semibold text-gray-700' }, '📋 Legenda:'),
+                            React.createElement('div', { className: 'legend-item' },
+                                React.createElement('div', { className: 'legend-color', style: { background: 'linear-gradient(135deg, #ef4444, #dc2626)', border: '2px solid #b91c1c' } }),
+                                React.createElement('span', { className: 'text-sm text-gray-600' }, 'Critical Path')
+                            ),
+                            React.createElement('div', { className: 'legend-item' },
+                                React.createElement('div', { className: 'w-4 h-4 bg-yellow-500 transform rotate-45 shadow-sm' }),
+                                React.createElement('span', { className: 'text-sm text-gray-600' }, 'Milestone')
+                            ),
+                            React.createElement('div', { className: 'legend-item' },
+                                React.createElement('div', { className: 'legend-color bg-green-500' }),
+                                React.createElement('span', { className: 'text-sm text-gray-600' }, 'Completato')
+                            ),
+                            React.createElement('div', { className: 'legend-item' },
+                                React.createElement('div', { className: 'legend-color bg-blue-500' }),
+                                React.createElement('span', { className: 'text-sm text-gray-600' }, 'In Lavorazione')
+                            ),
+                            React.createElement('div', { className: 'legend-item' },
+                                React.createElement('div', { className: 'legend-color bg-gray-400' }),
+                                React.createElement('span', { className: 'text-sm text-gray-600' }, 'Non Iniziato')
+                            ),
+                            React.createElement('div', { className: 'legend-item' },
+                                React.createElement('div', { className: 'w-10 border-t-2 border-dashed border-red-500' }),
+                                React.createElement('span', { className: 'text-sm text-gray-600' }, 'Oggi')
+                            )
+                        )
+                    )
+                ),
+
+                // Gantt Chart
+                React.createElement('div', { className: 'max-w-full mx-auto px-6 py-4' },
+                    React.createElement('div', { className: 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden' },
+                        // Timeline Header
+                        React.createElement('div', { className: 'flex border-b border-gray-200 sticky top-0 z-10 bg-white' },
+                            React.createElement('div', { className: 'w-96 min-w-96 bg-gray-50 p-4 border-r border-gray-200 flex items-center' },
+                                React.createElement('span', { className: 'font-semibold text-gray-700' }, '📌 Attività'),
+                                React.createElement('span', { className: 'ml-2 text-xs text-gray-400' }, `(${filteredTasks.length} visualizzate)`)
+                            ),
+                            React.createElement('div', { className: 'flex-1 bg-gray-50 relative overflow-x-auto', style: { minWidth: `${900 * zoom}px` } },
+                                React.createElement('div', { className: 'flex h-full' },
+                                    months.map((month, i) => {
+                                        const nextMonth = new Date(month);
+                                        nextMonth.setMonth(nextMonth.getMonth() + 1);
+                                        const monthEnd = nextMonth > projectEnd ? projectEnd : nextMonth;
+                                        const left = getPositionPercent(month);
+                                        const width = getPositionPercent(monthEnd) - left;
+                                        return React.createElement('div', {
+                                            key: i,
+                                            className: 'border-r border-gray-200 text-center py-3 text-sm font-semibold text-gray-600',
+                                            style: { width: `${width}%`, marginLeft: i === 0 ? `${left}%` : 0 }
+                                        }, month.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' }).toUpperCase());
+                                    })
+                                )
+                            )
+                        ),
+                        
+                        // Tasks
+                        React.createElement('div', { className: 'gantt-container divide-y divide-gray-50', style: { maxHeight: '65vh', overflowY: 'auto' } },
+                            filteredTasks.map((task, index) => {
+                                const statusColor = getStatusColor(task.status);
+                                const phaseColor = getPhaseColor(task.phase);
+                                const left = getPositionPercent(task.start);
+                                const width = getWidthPercent(task.start, task.end);
+                                
+                                let barColor = statusColor.border;
+                                if (task.status === 'Completato') barColor = '#22c55e';
+                                else if (task.status === 'In Lavorazione') barColor = '#3b82f6';
+                                else barColor = '#9ca3af';
+                                
+                                const barStyle = task.isCritical ? {
+                                    background: `linear-gradient(135deg, #ef4444, #dc2626)`,
+                                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+                                } : { background: barColor };
+
+                                return React.createElement('div', {
+                                    key: task.id,
+                                    className: `flex hover:bg-blue-50/50 transition-colors ${task.isCritical ? 'bg-red-50/40' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`
+                                },
+                                    // Task Info
+                                    React.createElement('div', { className: 'w-96 min-w-96 p-3 border-r border-gray-100' },
+                                        React.createElement('div', { className: 'flex items-start gap-3' },
+                                            React.createElement('span', { 
+                                                className: 'text-xs font-mono px-2 py-1 rounded-md font-semibold flex-shrink-0',
+                                                style: { background: phaseColor + '15', color: phaseColor, border: `1px solid ${phaseColor}30` }
+                                            }, task.id),
+                                            React.createElement('div', { className: 'flex-1 min-w-0' },
+                                                React.createElement('div', { className: `text-sm font-medium truncate ${task.isCritical ? 'text-red-700' : 'text-gray-800'}` }, 
+                                                    task.milestone && React.createElement('span', { className: 'text-yellow-500 mr-1' }, '◆'),
+                                                    task.task
+                                                ),
+                                                React.createElement('div', { className: 'flex items-center gap-2 mt-1.5 flex-wrap' },
+                                                    React.createElement('span', {
+                                                        className: 'status-badge',
+                                                        style: { background: statusColor.bg, color: statusColor.text, border: `1px solid ${statusColor.border}40` }
+                                                    }, task.status),
+                                                    React.createElement('span', {
+                                                        className: 'text-xs px-2 py-0.5 rounded-md font-medium',
+                                                        style: { background: getOwnerColor(task.owner) + '15', color: getOwnerColor(task.owner) }
+                                                    }, task.owner),
+                                                    task.isCritical && React.createElement('span', { className: 'text-xs', title: 'Critical Path' }, '🔥')
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    
+                                    // Gantt Bar
+                                    React.createElement('div', { 
+                                        className: 'flex-1 relative py-4',
+                                        style: { minWidth: `${900 * zoom}px` }
+                                    },
+                                        // Today line
+                                        todayPosition > 0 && todayPosition < 100 && React.createElement('div', {
+                                            className: 'today-line absolute top-0 bottom-0 border-l-2 border-dashed border-red-500',
+                                            style: { left: `${todayPosition}%` }
+                                        },
+                                            index === 0 && React.createElement('div', { className: 'today-label' }, 'OGGI')
+                                        ),
+                                        
+                                        // Bar
+                                        React.createElement('div', {
+                                            className: `gantt-bar absolute h-7 rounded-md ${task.isCritical ? 'critical-path' : ''}`,
+                                            style: {
+                                                left: `${left}%`,
+                                                width: `${Math.max(width, 1)}%`,
+                                                top: '50%',
+                                                marginTop: '-14px',
+                                                ...barStyle
+                                            },
+                                            onMouseEnter: (e) => showTooltip(e, task),
+                                            onMouseLeave: hideTooltip
+                                        },
+                                            // Progress indicator for in-progress tasks
+                                            task.status === 'In Lavorazione' && React.createElement('div', {
+                                                className: 'absolute left-0 top-0 bottom-0 bg-white/30 rounded-l-md',
+                                                style: { width: '40%' }
+                                            }),
+                                            task.milestone && React.createElement('div', {
+                                                className: 'milestone-marker bg-yellow-400 border-2 border-yellow-500',
+                                                style: { right: '-7px' }
+                                            })
+                                        )
+                                    )
+                                );
+                            })
+                        )
+                    )
+                ),
+
+                // Phase Summary
+                React.createElement('div', { className: 'max-w-full mx-auto px-6 py-4' },
+                    React.createElement('h2', { className: 'text-lg font-bold text-gray-800 mb-4 flex items-center gap-2' }, 
+                        React.createElement('span', null, '📊'),
+                        'Riepilogo per Fase'
+                    ),
+                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' },
+                        phases.map(phase => {
+                            const phaseTasks = data.tasks.filter(t => t.phase === phase);
+                            const phaseCompleted = phaseTasks.filter(t => t.status === 'Completato').length;
+                            const phaseInProgress = phaseTasks.filter(t => t.status === 'In Lavorazione').length;
+                            const phaseProgress = phaseTasks.length > 0 ? Math.round(((phaseCompleted + phaseInProgress * 0.5) / phaseTasks.length) * 100) : 0;
+                            const phaseCritical = phaseTasks.filter(t => t.isCritical).length;
+                            const phaseColor = getPhaseColor(phase);
+                            
+                            return React.createElement('div', {
+                                key: phase,
+                                className: 'phase-card bg-white rounded-xl shadow-sm p-5 border border-gray-100'
+                            },
+                                React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+                                    React.createElement('div', { className: 'flex items-center gap-2' },
+                                        React.createElement('div', { className: 'w-3 h-3 rounded-full', style: { background: phaseColor } }),
+                                        React.createElement('span', { className: 'font-semibold text-gray-800 text-sm' }, phase)
+                                    ),
+                                    phaseCritical > 0 && React.createElement('span', { className: 'text-xs text-red-600 flex items-center gap-1 bg-red-50 px-2 py-1 rounded-full' },
+                                        '🔥', phaseCritical
+                                    )
+                                ),
+                                React.createElement('div', { className: 'flex items-center justify-between text-sm text-gray-600 mb-3' },
+                                    React.createElement('span', null, `${phaseCompleted}/${phaseTasks.length} completate`),
+                                    React.createElement('span', { className: 'font-bold text-lg', style: { color: phaseColor } }, `${phaseProgress}%`)
+                                ),
+                                React.createElement('div', { className: 'w-full bg-gray-100 rounded-full h-2.5' },
+                                    React.createElement('div', {
+                                        className: 'h-2.5 rounded-full transition-all',
+                                        style: { width: `${phaseProgress}%`, background: phaseColor }
+                                    })
+                                ),
+                                React.createElement('div', { className: 'flex gap-3 mt-3 text-xs text-gray-500' },
+                                    React.createElement('span', { className: 'flex items-center gap-1' },
+                                        React.createElement('span', { className: 'w-2 h-2 rounded-full bg-green-500' }),
+                                        phaseCompleted
+                                    ),
+                                    React.createElement('span', { className: 'flex items-center gap-1' },
+                                        React.createElement('span', { className: 'w-2 h-2 rounded-full bg-blue-500' }),
+                                        phaseInProgress
+                                    ),
+                                    React.createElement('span', { className: 'flex items-center gap-1' },
+                                        React.createElement('span', { className: 'w-2 h-2 rounded-full bg-gray-400' }),
+                                        phaseTasks.length - phaseCompleted - phaseInProgress
+                                    )
+                                )
+                            );
+                        })
+                    )
+                ),
+
+                // Tooltip
+                tooltip.visible && tooltip.content && React.createElement('div', {
+                    className: 'tooltip',
+                    style: { left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }
+                },
+                    React.createElement('div', { className: 'font-semibold text-base mb-3 pb-2 border-b border-gray-600' }, tooltip.content.task),
+                    React.createElement('div', { className: 'grid grid-cols-2 gap-x-4 gap-y-2 text-sm' },
+                        React.createElement('span', { className: 'text-gray-400' }, 'ID'),
+                        React.createElement('span', { className: 'font-medium' }, tooltip.content.id),
+                        React.createElement('span', { className: 'text-gray-400' }, 'Fase'),
+                        React.createElement('span', { className: 'font-medium' }, tooltip.content.phase),
+                        React.createElement('span', { className: 'text-gray-400' }, 'Owner'),
+                        React.createElement('span', { className: 'font-medium' }, tooltip.content.owner),
+                        React.createElement('span', { className: 'text-gray-400' }, 'Status'),
+                        React.createElement('span', { className: 'font-medium' }, tooltip.content.status),
+                        React.createElement('span', { className: 'text-gray-400' }, 'Inizio'),
+                        React.createElement('span', { className: 'font-medium' }, formatDate(tooltip.content.start)),
+                        React.createElement('span', { className: 'text-gray-400' }, 'Fine'),
+                        React.createElement('span', { className: 'font-medium' }, formatDate(tooltip.content.end)),
+                        React.createElement('span', { className: 'text-gray-400' }, 'Durata'),
+                        React.createElement('span', { className: 'font-medium' }, `${daysBetween(tooltip.content.start, tooltip.content.end)} giorni`)
+                    ),
+                    (tooltip.content.isCritical || tooltip.content.milestone) && React.createElement('div', { className: 'mt-3 pt-2 border-t border-gray-600 flex gap-3' },
+                        tooltip.content.isCritical && React.createElement('span', { className: 'text-red-400 text-xs flex items-center gap-1' }, '🔥 Critical Path'),
+                        tooltip.content.milestone && React.createElement('span', { className: 'text-yellow-400 text-xs flex items-center gap-1' }, '◆ Milestone')
+                    )
+                ),
+
+                // Footer
+                React.createElement('footer', { className: 'max-w-full mx-auto px-6 py-6' },
+                    React.createElement('div', { className: 'bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex flex-wrap items-center justify-between gap-4' },
+                        React.createElement('div', { className: 'flex items-center gap-3' },
+                            React.createElement('img', { 
+                                src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%233b82f6" rx="15" width="100" height="100"/><text x="50" y="65" font-size="40" fill="white" text-anchor="middle" font-weight="bold">CP</text></svg>',
+                                className: 'w-8 h-8',
+                                alt: 'CRMpartners'
+                            }),
+                            React.createElement('span', { className: 'text-sm text-gray-600' }, 
+                                `Dashboard generata il ${formatDate(today)} | `,
+                                React.createElement('strong', null, 'CRMpartners'),
+                                ' © 2025'
+                            )
+                        ),
+                        React.createElement('div', { className: 'text-xs text-gray-400' }, 
+                            'Basato su best practice ITIL 4 e PMBoK | Freshservice Implementation Project'
+                        )
+                    )
+                )
+            );
+        };
+
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('app'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>
